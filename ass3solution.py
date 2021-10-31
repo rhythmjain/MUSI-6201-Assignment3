@@ -42,16 +42,25 @@ def block_audio(x, blockSize, hopSize, fs):
         i_stop = np.min([x.size - 1, i_start + blockSize - 1])
         xb[n][np.arange(0, blockSize)] = x[np.arange(i_start, i_stop + 1)]
     return xb, t
+def compute_hann_window(window_size):
+    return 0.5*(1-(np.cos(2*np.pi*(np.arange(window_size)/window_size))))
 
-def compute_spectogram(xb,fs):
+def compute_spectogram(xb,fs=44100):
     '''
     - Computes magnitude spectrum for each block of audio in xb, returns the magnitude spectogram X (blockSize/2+1 X NumOfBlocks)
     - A frequency vector fHz (dim blockSize/2+1) containing central frequency at each bim
     Apply a von-Hann window of appropriate length to the blocks
     '''
-    X =0
-    fInHz = 0
-    return X,fInHz
+    [NumBlocks, blockSize] = xb.shape
+    X = np.zeros(NumBlocks, blockSize//2 + 1)
+    hann = compute_hann_window(blockSize)
+    for block in range(NumBlocks):
+        windowed_block = np.multiply(hann,xb[block])
+        X[block] = np.abs(np.fft.fft(windowed_block)[:int(block.size // 2 + 1)])
+
+    fInHz = np.arange(0, blockSize, dtype=int)*fs/blockSize
+
+    return X.T, fInHz
 
 def track_pitch_fftmax(x, blockSize,hopSize,fs):
     '''
