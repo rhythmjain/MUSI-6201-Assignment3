@@ -1,10 +1,12 @@
 from __future__ import print_function
 import numpy as np
+import math
 import scipy 
 import os, glob
 from scipy.fftpack import fft
 import matplotlib.pyplot as plt
 import os, os.path
+from scipy import signal
 from scipy.io.wavfile import read as wavread
 
 
@@ -43,15 +45,49 @@ def block_audio(x, blockSize, hopSize, fs):
         xb[n][np.arange(0, blockSize)] = x[np.arange(i_start, i_stop + 1)]
     return xb, t
 
+def compute_hann_window(window_size):
+    return 0.5*(1-(np.cos(2*np.pi*(np.arange(window_size)/window_size))))
+
+def compute_spectogram2(xb,fs):
+    [NumBlocks, blockSize] = xb.shape
+    X_spec= np.zeros((NumBlocks, blockSize//2 + 1))
+
+    def fourier(x):
+        # Get Symmetric fft
+        w = signal.windows.hann(np.size(x))
+        windowed = x * w
+        w1 = int((x.size + 1) // 2)
+        w2 = int(x.size / 2)
+        fftans = np.zeros(x.size)
+
+        # Centre to make even function
+        fftans[0:w1] = windowed[w2:]
+        fftans[w2:] = windowed[0:w1]
+        X = fft(fftans)
+        magX = abs(X[0:int(x.size // 2 + 1)])
+        return magX
+    for block in range(xb.shape[0]):
+        X_spec[::,block] = fourier(xb[block])
+    fInHz = np.arange(0, blockSize, dtype=int)*fs/blockSize
+    return X_spec,fInHz
+
+
 def compute_spectogram(xb,fs):
     '''
     - Computes magnitude spectrum for each block of audio in xb, returns the magnitude spectogram X (blockSize/2+1 X NumOfBlocks)
     - A frequency vector fHz (dim blockSize/2+1) containing central frequency at each bim
     Apply a von-Hann window of appropriate length to the blocks
     '''
-    X =0
-    fInHz = 0
-    return X,fInHz
+    [NumBlocks, blockSize] = xb.shape
+    X = np.zeros((NumBlocks, blockSize//2 + 1))
+    hann = compute_hann_window(blockSize)
+    for block in range(NumBlocks):
+        windowed_block = np.multiply(hann,xb[block])
+        X[block] = np.abs(np.fft.fft(windowed_block)[:int(blockSize // 2 + 1)])
+
+    fInHz = np.arange(0, blockSize, dtype=int)*fs/blockSize
+
+    return X.T, fInHz
 
 def track_pitch_fftmax(x, blockSize,hopSize,fs):
     '''
@@ -67,14 +103,31 @@ def track_pitch_fftmax(x, blockSize,hopSize,fs):
 
 #HPS
 
+
 def get_f0_from_Hps(X,fs,order):
     '''
-    Computes computes the block-wise fundamental frequency f0 given the magnitude spectrogram X 
-    and the samping rate based on a HPS approach of order order.
+    Computes the block-wise fundamental frequency f0 given the magnitude spectrogram X 
+    and the samping rate based on a HPS approach of order.
 
     THIS COMPUTES HPS FOR EACH BLOCK
     '''
-    f0=0
+    f_min = 300
+    f0 = np.zeros(X.shape[1])
+    max_length = int((X.shape[0]-1)/order)
+    dwnpro = X[np.arange(0,max_length),:]
+    #Convert Frequency to bins
+    min_bin = int((f_min / fs)*2*(X.shape[0]-1))
+    print(min_bin)
+    fInHz = (np.arange(0, X.shape[0], dtype=int))*(fs)/2(X.shape[0]-1)
+    for i in range(1,order):
+        X_dwnsample = X[::i+1,::]
+        dwnpro *= X_dwnsample[np.arange(0,max_length),:]
+        #plt.figure()
+        #plt.plot(dwnpro)
+        #plt.show()
+    f = np.argmax(dwnpro[np.arange(min_bin,dwnpro.shape[0])],axis=0)
+    f0 = fInHz[f]
+    
     return f0
 
 def track_pitch_hps(x,blockSize,hopSize,fs):
@@ -82,9 +135,9 @@ def track_pitch_hps(x,blockSize,hopSize,fs):
     estimates the fundamental frequency f0 of the audio signal based on  HPS based approach. 
     Use blockSize = 1024 in compute_spectrogram(). Use order = 4 for get_f0_from_Hps()
     '''
-    f0=0
-    timeInSec = 0
-    
+    xb,timeInSec = block_audio(x,blockSize,hopSize,fs)
+    X,finHz = compute_spectogram2(xb,fs)
+    f0 = get_f0_from_Hps(X,fs,4)
     return f0,timeInSec
 
 #************************------------------------------************************---------------------------******#
