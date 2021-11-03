@@ -139,8 +139,16 @@ def eval_voiced_fp(estimation,annotation):
     False Positive : The denominator would be the number of blocks for which annotation = 0. 
     The numerator would be how many of these blocks were classified as voiced (with a fundamental frequency not equal to 0) is your estimation. 
     '''
-    pfp=0
-    return pfp
+    
+    numerator = np.count_nonzero([estimation[annotation==0]!=0])
+    denominator = np.count_nonzero([annotation==0])
+    false_positives_percentage = -1 #Need to check for these in the calling functions
+    try:
+        false_positives_percentage = (numerator/denominator)*100
+    except ZeroDivisionError:
+        print("Denominator is equal to zero!")    
+    
+    return false_positives_percentage
 
 def eval_voiced_fn(estimation,annotation):
     '''
@@ -148,8 +156,15 @@ def eval_voiced_fn(estimation,annotation):
     False Negative: In this case the denominator would be number of blocks which have non-zero fundamental frequency in the annotation. 
     The numerator would be number of blocks out of these that were detected as zero is the estimation.
     '''
-    pfn =0
-    return pfn
+    numerator = np.count_nonzero([estimation[annotation!=0]==0])
+    denominator = np.count_nonzero([annotation!=0])
+    false_positives_percentage = -1 #Need to check for these in the calling functions
+    try:
+        false_positives_percentage = (numerator/denominator)*100
+    except ZeroDivisionError:
+        print("Denominator is equal to zero!")  
+    
+    return false_negatives_percentage
 
 def eval_pitchtrack_v2(estimation,annotation):
     '''
