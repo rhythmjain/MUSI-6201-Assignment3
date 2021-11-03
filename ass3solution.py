@@ -52,11 +52,11 @@ def compute_spectogram(xb,fs=44100):
     Apply a von-Hann window of appropriate length to the blocks
     '''
     [NumBlocks, blockSize] = xb.shape
-    X = np.zeros(NumBlocks, blockSize//2 + 1)
+    X = np.zeros((NumBlocks, blockSize//2 + 1))
     hann = compute_hann_window(blockSize)
     for block in range(NumBlocks):
         windowed_block = np.multiply(hann,xb[block])
-        X[block] = np.abs(np.fft.fft(windowed_block)[:int(block.size // 2 + 1)])
+        X[block] = np.abs(np.fft.fft(windowed_block)[:int(blockSize // 2 + 1)])
 
     fInHz = np.arange(0, blockSize, dtype=int)*fs/blockSize
 
@@ -70,9 +70,14 @@ def track_pitch_fftmax(x, blockSize,hopSize,fs):
     QUESTION: If the blockSize = 1024 for blocking what is the exact time resolution of your pitch tracker, 
     Can this be improved without changing the block-size? If yes, how? If no, why? (Use a sampling rate of 44100Hz for all calculations).
     '''
-    f0 = 0
-    timeInSec = 0
-    return f0, timeInSec
+    xb, t = block_audio(x, blockSize, hopSize, fs)
+    X, freq=compute_spectrogram(xb, fs)
+    print(t.size, freq.size, X.shape)
+    f0 = np.zeros(xb.shape[0])
+    for i in range(X.shape[1]):
+        f0[i] = freq[np.argmax(X[:,i])]
+    print(f0.size)
+    return f0, t
 
 #HPS
 
@@ -114,7 +119,7 @@ def create_voicing_mask(rmsDb, thesholdDb):
     takes a vector of decibel values for the different blocks of audio and creates a binary mask based on the threshold parameter. 
     Note: A binary mask in this case is a simple column vector of the same size as 'rmsDb' containing 0's and 1's only. 
     The value of the mask at an index is 0 if the rmsDb value at that index is less than 'thresholdDb' 
-    and the value is 1 if 'rmsDb' value at that index is greater than or equal to the threshold. '''
+    and the value is 1 if 'rmsDb' value at that index is g`reater than or equal to the threshold. '''
     mask = np.ones((5,2))
     return mask
 
