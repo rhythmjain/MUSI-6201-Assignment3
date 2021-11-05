@@ -71,8 +71,7 @@ def compute_spectogram2(xb,fs):
     fInHz = np.arange(0, blockSize, dtype=int)*fs/blockSize
     return X_spec,fInHz
 
-
-def compute_spectogram(xb,fs):
+def compute_spectrogram(xb,fs=44100):
     '''
     - Computes magnitude spectrum for each block of audio in xb, returns the magnitude spectogram X (blockSize/2+1 X NumOfBlocks)
     - A frequency vector fHz (dim blockSize/2+1) containing central frequency at each bim
@@ -183,8 +182,16 @@ def eval_voiced_fp(estimation,annotation):
     False Positive : The denominator would be the number of blocks for which annotation = 0. 
     The numerator would be how many of these blocks were classified as voiced (with a fundamental frequency not equal to 0) is your estimation. 
     '''
-    pfp=0
-    return pfp
+    
+    numerator = np.count_nonzero([estimation[annotation==0]!=0])
+    denominator = np.count_nonzero([annotation==0])
+    false_positives_percentage = -1 #Need to check for these in the calling functions
+    try:
+        false_positives_percentage = (numerator/denominator)*100
+    except ZeroDivisionError:
+        print("Denominator is equal to zero!")    
+    
+    return false_positives_percentage
 
 def eval_voiced_fn(estimation,annotation):
     '''
@@ -192,8 +199,15 @@ def eval_voiced_fn(estimation,annotation):
     False Negative: In this case the denominator would be number of blocks which have non-zero fundamental frequency in the annotation. 
     The numerator would be number of blocks out of these that were detected as zero is the estimation.
     '''
-    pfn =0
-    return pfn
+    numerator = np.count_nonzero([estimation[annotation!=0]==0])
+    denominator = np.count_nonzero([annotation!=0])
+    false_positives_percentage = -1 #Need to check for these in the calling functions
+    try:
+        false_positives_percentage = (numerator/denominator)*100
+    except ZeroDivisionError:
+        print("Denominator is equal to zero!")  
+    
+    return false_negatives_percentage
 
 def eval_pitchtrack_v2(estimation,annotation):
     '''
@@ -209,7 +223,17 @@ def eval_pitchtrack_v2(estimation,annotation):
 
 #************************------------------------------************************---------------------------******#
 #E EVALUATION
-
+def generateSinusoidal(amplitude, sampling_rate_Hz, frequency_Hz, length_secs):
+    t = np.arange(0, length_secs,1.0/(sampling_rate_Hz))
+    x = amplitude * np.sin(2*np.pi*frequency_Hz*t)
+    return t,x
+def plot(x,y,title="Plot", xlabel="xlabel", ylabel="ylabel"):
+    plt.title(title)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.plot(x,y)
+    plt.show()
+    
 def executeassign3():
     '''
     generate a test signal (sine wave, f = 441 Hz from 0-1 sec and f = 882 Hz from 1-2 sec), apply your track_pitch_fftmax(), (blockSize = 1024, hopSize = 512) and plot the f0 curve. 
@@ -218,6 +242,27 @@ def executeassign3():
 
     [5 points] Next use (blockSize = 2048, hopSize = 512) and repeat the above experiment (only for the max spectra method). Do you see any improvement in performance? 
     '''
+    fs = 44100
+    A = 1
+    sn1 = generateSinusoidal(A, fs, 441, 1)
+    sn2 = generateSinusoidal(A, fs, 882, 1)
+    t = np.array(sn1[0])
+    t= np.append(t, s n2[0])
+
+    signal = sn1[1]
+    signal = np.append(signal, sn2[1])
+
+    
+    f0Est, timeEst=track_pitch_fftmax(signal, 1024, 512, fs)
+    
+    #plot the f0 curve
+    plot(np.arange(f0Est.size), f0Est, "F0 curve - test signal", "Block number", "F0(Hz)")
+    
+    #plot the absolute error per block
+    groundtruth = [441 if i < (f0Est.size/2)-1 else 882 for i in range(f0Est.size)]
+    abs_error=np.abs(groundtruth-f0Est)
+    plot(np.arange(f0Est.size), abs_error, "Absolute error per block - test signal", "Block number", "Absolute Error(Hz)")
+    
     return 0
 '''
 [5 points] Evaluate your track_pitch_fftmax() using the development set (see assignment 1) and the eval_pitchtrack_v2() method (use blockSize = 1024, hopSize = 512). Report the average performance metrics across the development set.
@@ -249,3 +294,7 @@ def track_pitch_mod(x,blockSize,hopSize,fs):
     timeInSec = 0
 
     return f0,timeInSec
+
+
+
+executeassign3()
