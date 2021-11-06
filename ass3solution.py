@@ -48,7 +48,7 @@ def block_audio(x, blockSize, hopSize, fs):
 def compute_hann_window(window_size):
     return 0.5*(1-(np.cos(2*np.pi*(np.arange(window_size)/window_size))))
 
-def compute_spectogram2(xb,fs):
+def compute_spectrogram2(xb,fs):
     [NumBlocks, blockSize] = xb.shape
     X_spec= np.zeros((NumBlocks, blockSize//2 + 1))
 
@@ -122,7 +122,7 @@ def get_f0_from_Hps(X,fs,order):
     #Convert Frequency to bins
     min_bin = int((f_min / fs)*2*(X.shape[0]-1))
     print(min_bin)
-    fInHz = (np.arange(0, X.shape[0], dtype=int))*(fs)/2(X.shape[0]-1)
+    fInHz = (np.arange(0, X.shape[0], dtype=int))*(fs)/2*(X.shape[0]-1)
     for i in range(1,order):
         X_dwnsample = X[::i+1,::]
         dwnpro *= X_dwnsample[np.arange(0,max_length),:]
@@ -140,7 +140,7 @@ def track_pitch_hps(x,blockSize,hopSize,fs):
     Use blockSize = 1024 in compute_spectrogram(). Use order = 4 for get_f0_from_Hps()
     '''
     xb,timeInSec = block_audio(x,blockSize,hopSize,fs)
-    X,finHz = compute_spectogram2(xb,fs)
+    X,finHz = compute_spectrogram(xb,fs)
     f0 = get_f0_from_Hps(X,fs,4)
     return f0,timeInSec
 
@@ -201,9 +201,9 @@ def eval_voiced_fn(estimation,annotation):
     '''
     numerator = np.count_nonzero([estimation[annotation!=0]==0])
     denominator = np.count_nonzero([annotation!=0])
-    false_positives_percentage = -1 #Need to check for these in the calling functions
+    false_negatives_percentage = -1 #Need to check for these in the calling functions
     try:
-        false_positives_percentage = (numerator/denominator)*100
+        false_negatives_percentage = (numerator/denominator)*100
     except ZeroDivisionError:
         print("Denominator is equal to zero!")  
     
@@ -247,7 +247,7 @@ def executeassign3():
     sn1 = generateSinusoidal(A, fs, 441, 1)
     sn2 = generateSinusoidal(A, fs, 882, 1)
     t = np.array(sn1[0])
-    t= np.append(t, s n2[0])
+    t= np.append(t, sn2[0])
 
     signal = sn1[1]
     signal = np.append(signal, sn2[1])
