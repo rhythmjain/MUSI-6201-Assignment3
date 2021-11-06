@@ -72,7 +72,7 @@ def compute_spectogram2(xb,fs):
     return X_spec,fInHz
 
 
-def compute_spectogram(xb,fs):
+def compute_spectrogram(xb,fs):
     '''
     - Computes magnitude spectrum for each block of audio in xb, returns the magnitude spectogram X (blockSize/2+1 X NumOfBlocks)
     - A frequency vector fHz (dim blockSize/2+1) containing central frequency at each bim
@@ -93,15 +93,17 @@ def track_pitch_fftmax(x, blockSize,hopSize,fs):
     '''
     Estimates fundamental frequency f0 of the audio signal based on a block-wise maxiumum spectral peak finding approach
     using compute_spectogram
-
     QUESTION: If the blockSize = 1024 for blocking what is the exact time resolution of your pitch tracker, 
     Can this be improved without changing the block-size? If yes, how? If no, why? (Use a sampling rate of 44100Hz for all calculations).
     '''
-    f0 = 0
-    timeInSec = 0
-    return f0, timeInSec
-
-#HPS
+    xb, t = block_audio(x, blockSize, hopSize, fs)
+    X, freq= compute_spectrogram(xb, fs)
+    print(t.size, freq.size, X.shape)
+    f0 = np.zeros(xb.shape[0])
+    for i in range(X.shape[1]):
+        f0[i] = freq[np.argmax(X[:,i])]
+    print(f0.size)
+    return f0, t
 
 
 def get_f0_from_Hps(X,fs,order):
@@ -150,16 +152,17 @@ def extract_rms(xb):
         threshold = 1e-5  # truncated at -100dB
         if rmsDb[block] < threshold:
             rmsDb[block] = threshold
-        rmsDb[block] = 20 * np.log10(rms[block])
+        rmsDb[block] = 20 * np.log10(rmsDb[block])
     return rmsDb
 
-def create_voicing_mask(rmsDb, thesholdDb):
+def create_voicing_mask(rmsDb, thresholdDb):
     '''
     takes a vector of decibel values for the different blocks of audio and creates a binary mask based on the threshold parameter. 
     Note: A binary mask in this case is a simple column vector of the same size as 'rmsDb' containing 0's and 1's only. 
     The value of the mask at an index is 0 if the rmsDb value at that index is less than 'thresholdDb' 
     and the value is 1 if 'rmsDb' value at that index is greater than or equal to the threshold. '''
-    mask = np.ones((5,2))
+    mask = np.zeros_like(rmsDb)
+    mask = [1 if i<=thresholdDb else 0 for i in rmsDb]
     return mask
 
 def apply_voicing_mask(f0,mask):
@@ -167,7 +170,7 @@ def apply_voicing_mask(f0,mask):
     which applies the voicing mask to the previously computed f0 so that the 
     f0 of blocks with low energy is set to 0.
     '''
-    f0Adj = 0
+    f0Adj = np.multiply(mask,f0)
     return f0Adj
 
 #************************------------------------------************************---------------------------******#
@@ -178,8 +181,16 @@ def eval_voiced_fp(estimation,annotation):
     False Positive : The denominator would be the number of blocks for which annotation = 0. 
     The numerator would be how many of these blocks were classified as voiced (with a fundamental frequency not equal to 0) is your estimation. 
     '''
-    pfp=0
-    return pfp
+    
+    numerator = np.count_nonzero([estimation[annotation==0]!=0])
+    denominator = np.count_nonzero([annotation==0])
+    false_positives_percentage = -1 #Need to check for these in the calling functions
+    try:
+        false_positives_percentage = (numerator/denominator)*100
+    except ZeroDivisionError:
+        print("Denominator is equal to zero!")    
+    
+    return false_positives_percentage
 
 def eval_voiced_fn(estimation,annotation):
     '''
@@ -187,8 +198,15 @@ def eval_voiced_fn(estimation,annotation):
     False Negative: In this case the denominator would be number of blocks which have non-zero fundamental frequency in the annotation. 
     The numerator would be number of blocks out of these that were detected as zero is the estimation.
     '''
-    pfn =0
-    return pfn
+    numerator = np.count_nonzero([estimation[annotation!=0]==0])
+    denominator = np.count_nonzero([annotation!=0])
+    false_negatives_percentage = -1 #Need to check for these in the calling functions
+    try:
+        false_negatives_percentage = (numerator/denominator)*100
+    except ZeroDivisionError:
+        print("Denominator is equal to zero!")  
+    
+    return false_negatives_percentage
 
 def eval_pitchtrack_v2(estimation,annotation):
     '''
@@ -196,9 +214,36 @@ def eval_pitchtrack_v2(estimation,annotation):
     Note: the errorCentRms computation might need to slightly change now considering that your estimation might also contain zeros.
 
     '''
-    errCentRms=0
-    pfp=0
-    pfn=0
+    def convert_freq2midi(fInHz, fA4InHz = 440):
+        def convert_freq2midi_scalar(f, fA4InHz):
+ 
+            if f <= 0:
+                return 0
+            else:
+                return (69 + 12 * np.log2(f/fA4InHz))
+        fInHz = np.asarray(fInHz)
+        if fInHz.ndim == 0:
+            return convert_freq2midi_scalar(fInHz,fA4InHz)
+        midi = np.zeros(fInHz.shape)
+        for k,f in enumerate(fInHz):
+            midi[k] =  convert_freq2midi_scalar(f,fA4InHz)
+                
+        return (midi)
+    def eval_pitchtrack(estimateInHz, groundtruthInHz):
+        if np.abs(groundtruthInHz).sum() <= 0:
+            return 0
+        # truncate longer vector
+        if groundtruthInHz.size < estimateInHz.size:
+            estimateInHz = estimateInHz[np.arange(0,groundtruthInHz.size)]
+        elif estimateInHz.size < groundtruthInHz.size:
+            groundtruthInHz = groundtruthInHz[np.arange(0,estimateInHz.size)]
+        diffInCent = 100*(convert_freq2midi(estimateInHz) - 
+    convert_freq2midi(groundtruthInHz))
+        rms = np.sqrt(np.mean(diffInCent[groundtruthInHz != 0]**2))
+        return (rms)
+    errCentRms= eval_pitchtrack(estimation, annotation)
+    pfp= eval_voiced_fp(estimation,annotation)
+    pfn= eval_voiced_fn(estimation,annotation)
     return errCentRms,pfp,pfn
 
 
@@ -213,6 +258,40 @@ def executeassign3():
 
     [5 points] Next use (blockSize = 2048, hopSize = 512) and repeat the above experiment (only for the max spectra method). Do you see any improvement in performance? 
     '''
+    fs = 44100
+    f1= 441
+    f2 = 882
+    duration = [1,1]
+    x = np.zeros(2*fs)
+    x[0:fs] = np.arange(0,fs*duration[0])*(f1/fs)
+    x[fs:]= np.arange(0,fs*duration[1])*(f2/fs)
+    SineWave = np.sin(2*np.pi*x)
+    xb, t = block_audio(SineWave, 1024, 512, fs)
+    f0_gnd = [f1 if t<=1 else f2 for i in xb]
+    f0_fft,t_fft =  track_pitch_fftmax(SineWave, 1024,512,fs)
+    f0_hps, t_hps = track_pitch_hps(SineWave,1024,512,fs)
+    ferr_fft = np.abs(np.diff((f0_fft,f0_gnd)))
+    plt.figure()
+    plt.plot(f0_fft)
+    plt.title('Fft max F0')
+    plt.xlabel('Blocks')
+    plt.ylabel('F0')    
+    plt.figure()
+    plt.plot(f0_hps)
+    plt.title('HPS F0')
+    plt.xlabel('Blocks')
+    plt.ylabel('F0')
+    plt.plot(ferr_fft)
+    plt.title('Fft Max F0 Error')
+    plt.xlabel('Blocks')
+    plt.ylabel('Error')
+
+    #Experiment with (blockSize = 2048, hopSize = 512)
+
+    f0_fft2,t_fft2 =  track_pitch_fftmax(SineWave, 1024,512,fs)
+    xb2, t2 = block_audio(SineWave, 2048, 512, fs)
+    f0_gnd2 = [f1 if t<=1 else f2 for i in xb2]
+    ferr_fft = np.abs(np.diff((f0_fft2,f0_gnd2)))
     return 0
 '''
 [5 points] Evaluate your track_pitch_fftmax() using the development set (see assignment 1) and the eval_pitchtrack_v2() method (use blockSize = 1024, hopSize = 512). Report the average performance metrics across the development set.
