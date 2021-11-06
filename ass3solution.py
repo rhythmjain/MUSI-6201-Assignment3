@@ -227,6 +227,7 @@ def generateSinusoidal(amplitude, sampling_rate_Hz, frequency_Hz, length_secs):
     t = np.arange(0, length_secs,1.0/(sampling_rate_Hz))
     x = amplitude * np.sin(2*np.pi*frequency_Hz*t)
     return t,x
+
 def plot(x,y,title="Plot", xlabel="xlabel", ylabel="ylabel"):
     plt.title(title)
     plt.xlabel(xlabel)
@@ -252,16 +253,44 @@ def executeassign3():
     signal = sn1[1]
     signal = np.append(signal, sn2[1])
 
+    #blockSize 1024 and hopSize 512
     
-    f0Est, timeEst=track_pitch_fftmax(signal, 1024, 512, fs)
+    #Run track_pitch_fftmax
+    f0Est1, timeEst1 = track_pitch_fftmax(signal, 1024, 512, fs)
+    groundtruth = [441 if i < (f0Est1.size/2) - 1 else 882 for i in range(f0Est1.size)]
+    abs_error1 = np.abs(groundtruth - f0Est1)
     
     #plot the f0 curve
-    plot(np.arange(f0Est.size), f0Est, "F0 curve - test signal", "Block number", "F0(Hz)")
+    plot(np.arange(f0Est1.size), f0Est1, "F0 curve - test signal", "Block number", "F0(Hz)")
     
     #plot the absolute error per block
-    groundtruth = [441 if i < (f0Est.size/2)-1 else 882 for i in range(f0Est.size)]
-    abs_error=np.abs(groundtruth-f0Est)
-    plot(np.arange(f0Est.size), abs_error, "Absolute error per block - test signal", "Block number", "Absolute Error(Hz)")
+    plot(np.arange(f0Est1.size), abs_error1, "Absolute error per block - test signal", "Block number", "Absolute Error(Hz)")
+    
+    #Run track_pitch_hps
+    f0Est2, timeEst2 = track_pitch_hps(signal, 1024, 512, fs)
+    groundtruth2 = [441 if i < (f0Est2.size/2) - 1 else 882 for i in range(f0Est2.size)]
+    abs_error_hps = np.abs(groundtruth2 - f0Est2)
+    
+    #plot the f0 curve for hps
+    
+    plot(np.arange(f0Est2.size), f0Est2, "F0 curve with HPS - test signal, blockSize 1024 and hopSize 512", "Block number", "F0(Hz)")
+    
+    #plot the absolute error per block for hps
+    plot(np.arange(f0Est2.size), abs_error_hps, "Absolute error per block with HPS - test signal, blockSize 1024 and hopSize 512", "Block number", "Absolute Error(Hz)")
+    
+    #blockSize 2048 and hopSize 512
+    
+    #Run track_pitch_fftmax with 
+    f0Est3, timeEst3=track_pitch_fftmax(signal, 2048, 512, fs)
+    groundtruth3 = [441 if i < int(f0Est3.size/2) - 1 else 882 for i in range(f0Est3.size)]
+    abs_error_fftmax2 = np.abs(groundtruth3 - f0Est3)
+    
+    #plot the f0 curve for track_pitch_fftmax
+    plot(np.arange(f0Est3.size), f0Est3, "F0 curve with FFTMAX - test signal, blockSize 2048 and hopSize 512", "Block number", "F0(Hz)")
+    
+    #plot the absolute error per block for track_pitch_fftmax
+    plot(np.arange(f0Est3.size), abs_error_fftmax2, "Absolute error per block with FFTMAX - test signal, blockSize 2048 and hopSize 512", "Block number", "Absolute Error(Hz)")
+    
     
     return 0
 '''
