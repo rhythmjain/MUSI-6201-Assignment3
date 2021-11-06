@@ -261,10 +261,10 @@ def executeassign3():
     abs_error1 = np.abs(groundtruth - f0Est1)
     
     #plot the f0 curve
-    plot(np.arange(f0Est1.size), f0Est1, "F0 curve - test signal", "Block number", "F0(Hz)")
+    plot(np.arange(f0Est1.size), f0Est1, "F0 curve with FFTMAX - test signal,  blockSize 1024 and hopSize 512", "Block number", "F0(Hz)")
     
     #plot the absolute error per block
-    plot(np.arange(f0Est1.size), abs_error1, "Absolute error per block - test signal", "Block number", "Absolute Error(Hz)")
+    plot(np.arange(f0Est1.size), abs_error1, "Absolute error per block - test signal, blockSize 1024 and hopSize 512", "Block number", "Absolute Error(Hz)")
     
     #Run track_pitch_hps
     f0Est2, timeEst2 = track_pitch_hps(signal, 1024, 512, fs)
@@ -282,7 +282,7 @@ def executeassign3():
     
     #Run track_pitch_fftmax with 
     f0Est3, timeEst3=track_pitch_fftmax(signal, 2048, 512, fs)
-    groundtruth3 = [441 if i < int(f0Est3.size/2) - 1 else 882 for i in range(f0Est3.size)]
+    groundtruth3 = [441 if i < (f0Est3.size/2) - 1 else 882 for i in range(f0Est3.size)]
     abs_error_fftmax2 = np.abs(groundtruth3 - f0Est3)
     
     #plot the f0 curve for track_pitch_fftmax
