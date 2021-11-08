@@ -50,7 +50,7 @@ def compute_hann_window(window_size):
 
 def compute_spectogram2(xb,fs):
     [NumBlocks, blockSize] = xb.shape
-    X_spec= np.zeros((NumBlocks, blockSize//2 + 1))
+    X_spec= np.zeros((blockSize//2 + 1,NumBlocks))
 
     def fourier(x):
         # Get Symmetric fft
@@ -64,7 +64,7 @@ def compute_spectogram2(xb,fs):
         fftans[0:w1] = windowed[w2:]
         fftans[w2:] = windowed[0:w1]
         X = fft(fftans)
-        magX = abs(X[0:int(x.size // 2 + 1)])
+        magX = abs(X[0:int(blockSize//2 + 1)])
         return magX
     for block in range(xb.shape[0]):
         X_spec[::,block] = fourier(xb[block])
@@ -119,8 +119,8 @@ def get_f0_from_Hps(X,fs,order):
     dwnpro = X[np.arange(0,max_length),:]
     #Convert Frequency to bins
     min_bin = int((f_min / fs)*2*(X.shape[0]-1))
-    print(min_bin)
-    fInHz = (np.arange(0, X.shape[0], dtype=int))*(fs)/2(X.shape[0]-1)
+    #print(min_bin)
+    fInHz = (np.arange(0, X.shape[0], dtype=int))*(fs)/(2*(X.shape[0]-1))
     for i in range(1,order):
         X_dwnsample = X[::i+1,::]
         dwnpro *= X_dwnsample[np.arange(0,max_length),:]
@@ -249,6 +249,15 @@ def eval_pitchtrack_v2(estimation,annotation):
 
 #************************------------------------------************************---------------------------******#
 #E EVALUATION
+
+def plotter(x,titles):
+    plt.figure()
+    plt.plot(x)
+    plt.title(titles[0])
+    plt.xlabel(titles[1])
+    plt.ylabel(titles[2])  
+    
+    return 0
 
 def executeassign3():
     '''
