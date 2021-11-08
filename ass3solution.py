@@ -119,7 +119,7 @@ def get_f0_from_Hps(X,fs,order):
     dwnpro = X[np.arange(0,max_length),:]
     #Convert Frequency to bins
     min_bin = int((f_min / fs)*2*(X.shape[0]-1))
-    #print(min_bin)
+    #sprint(min_bin)
     fInHz = (np.arange(0, X.shape[0], dtype=int))*(fs)/(2*(X.shape[0]-1))
     for i in range(1,order):
         X_dwnsample = X[::i+1,::]
@@ -162,7 +162,7 @@ def create_voicing_mask(rmsDb, thresholdDb):
     The value of the mask at an index is 0 if the rmsDb value at that index is less than 'thresholdDb' 
     and the value is 1 if 'rmsDb' value at that index is greater than or equal to the threshold. '''
     mask = np.zeros_like(rmsDb)
-    mask = [1 if i<=thresholdDb else 0 for i in rmsDb]
+    mask = [1 if i>=thresholdDb else 0 for i in rmsDb]
     return mask
 
 def apply_voicing_mask(f0,mask):
