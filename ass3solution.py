@@ -141,6 +141,38 @@ def track_pitch_hps(x,blockSize,hopSize,fs):
     f0 = get_f0_from_Hps(X,fs,4)
     return f0,timeInSec
 
+def comp_acf(inputVector, bIsNormalized = True):
+    if bIsNormalized:
+        norm = np.dot(inputVector, inputVector)
+    else:
+        norm = 1
+    afCorr = np.correlate(inputVector, inputVector, "full") / norm
+    afCorr = afCorr[np.arange(inputVector.size-1, afCorr.size)]
+    return (afCorr)
+
+def get_f0_from_acf (r, fs):
+    eta_min = 1
+    afDeltaCorr = np.diff(r)
+    eta_tmp = np.argmax(afDeltaCorr > 0)
+    eta_min = np.max([eta_min, eta_tmp])
+    f = np.argmax(r[np.arange(eta_min + 1, r.size)])
+    f = fs / (f + eta_min + 1)
+    return (f)
+
+def track_pitch_acf(x,blockSize,hopSize,fs):
+    
+    # get blocks
+    [xb,t] = block_audio(x,blockSize,hopSize,fs)
+    # init result
+    f0 = np.zeros(xb.shape[0]
+                  )
+    # compute acf
+    for n in range(0, xb.shape[0]):
+        r = comp_acf(xb[n,:])
+        f0[n] = get_f0_from_acf(r,fs)
+    return (f0,t)
+        
+        
 #************************------------------------------************************---------------------------******#
 #Part 2: Voicing Detection
 
@@ -207,13 +239,7 @@ def eval_voiced_fn(estimation,annotation):
     
     return false_negatives_percentage
 
-def eval_pitchtrack_v2(estimation,annotation):
-    '''
-    return all the 3 performance metrics for your fundamental frequency estimation.  
-    Note: the errorCentRms computation might need to slightly change now considering that your estimation might also contain zeros.
-
-    '''
-    def convert_freq2midi(fInHz, fA4InHz = 440):
+def convert_freq2midi(fInHz, fA4InHz = 440):
         def convert_freq2midi_scalar(f, fA4InHz):
  
             if f <= 0:
@@ -228,7 +254,8 @@ def eval_pitchtrack_v2(estimation,annotation):
             midi[k] =  convert_freq2midi_scalar(f,fA4InHz)
                 
         return (midi)
-    def eval_pitchtrack(estimateInHz, groundtruthInHz):
+    
+def eval_pitchtrack(estimateInHz, groundtruthInHz):
         if np.abs(groundtruthInHz).sum() <= 0:
             return 0
         # truncate longer vector
@@ -240,9 +267,17 @@ def eval_pitchtrack_v2(estimation,annotation):
     convert_freq2midi(groundtruthInHz))
         rms = np.sqrt(np.mean(diffInCent[groundtruthInHz != 0]**2))
         return (rms)
-    errCentRms= eval_pitchtrack(estimation, annotation)
+    
+def eval_pitchtrack_v2(estimation,annotation):
+    '''
+    return all the 3 performance metrics for your fundamental frequency estimation.  
+    Note: the errorCentRms computation might need to slightly change now considering that your estimation might also contain zeros.
+
+    '''    
     pfp= eval_voiced_fp(estimation,annotation)
     pfn= eval_voiced_fn(estimation,annotation)
+    errCentRms= eval_pitchtrack(estimation, annotation)
+    
     return errCentRms,pfp,pfn
 
 
@@ -368,9 +403,20 @@ def track_pitch(x,blockSize,hopSize,fs,method,voicingThres):
     that takes audio signal ‘x’ and related paramters (fs, blockSize, hopSize), 
     calls the appropriate pitch tracker based on the method parameter (‘acf’,‘max’, ‘hps’) to compute the fundamental frequency and then applies the voicing mask based on the threshold parameter.
     '''
-    f0Adj = 0
-    timeInSec = 0
-    return f0Adj,timeInSec
+    
+    if method == 'acf':
+        f0, timeInSec = track_pitch_acf(x,blockSize, hopSize, fs)
+    elif method == 'hps':
+        f0, timeInSec = track_pitch_hps(x,blockSize, hopSize, fs)
+    elif method == 'max':
+        f0, timeInSec = track_pitch_fftmax(x,blockSize, hopSize, fs)
+
+    xb, t = block_audio(x, blockSize, hopSize, fs)
+    rmsDb = extract_rms(xb)
+    voicing_mask = create_voicing_mask(rmsDb, voicingThres)
+    f0Adj = apply_voicing_mask(f0, voicing_mask)
+
+    return f0Adj, timeInSec
 
 
 #************************------------------------------************************---------------------------******#
@@ -378,10 +424,10 @@ def track_pitch(x,blockSize,hopSize,fs,method,voicingThres):
 def track_pitch_mod(x,blockSize,hopSize,fs):
     '''
     [10 points, capped at max] 
-    Implement a function: [f0, timeInSec] = track_pitch_mod(x, blockSize, hopSize, fs) that combines ideas from different pitch trackers you have tried thus far 
-    and thereby provides better f0 estimations. You may include voicing detection within this method with parameters of your choosing. 
-    Please explain your approach in the report. Your function will be tested using a testing set (not provided) with a block size of 1024 and a hopsize of 512, 
-    and points will be given based on its performance compared to the other groups. Best performing group gets 10 points and worst performing group gets 1 point. 
+    Function that combines ideas from different pitch trackers you have tried thus far and thereby provides better f0 estimations. You may include voicing 
+    detection within this method with parameters of your choosing. Please explain your approach in the report. Your function will be tested using a testing set 
+    (not provided) with a block size of 1024 and a hopsize of 512, and points will be given based on its performance compared to the other groups. Best performing
+    group gets 10 points and worst performing group gets 1 point. 
     '''
     f0=0
     timeInSec = 0
