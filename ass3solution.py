@@ -265,7 +265,7 @@ def eval_pitchtrack(estimateInHz, groundtruthInHz):
             groundtruthInHz = groundtruthInHz[np.arange(0,estimateInHz.size)]
         diffInCent = 100*(convert_freq2midi(estimateInHz) - 
     convert_freq2midi(groundtruthInHz))
-        rms = np.sqrt(np.mean(diffInCent[groundtruthInHz != 0]**2))
+        rms = np.sqrt(np.mean(diffInCent**2))
         return (rms)
     
 def eval_pitchtrack_v2(estimation,annotation):
@@ -398,6 +398,74 @@ def executeassign3():
 [6 points] Implement a MATLAB wrapper function [f0Adj, timeInSec] = track_pitch(x, blockSize, hopSize, fs, method, voicingThres) that takes audio signal ‘x’ and related paramters (fs, blockSize, hopSize), calls the appropriate pitch tracker based on the method parameter (‘acf’,‘max’, ‘hps’) to compute the fundamental frequency and then applies the voicing mask based on the threshold parameter. 
 [6 points] Evaluate your track_pitch() using the development set and the eval_pitchtrack_v2() method (use blockSize = 1024, hopSize = 512) over all 3 pitch trackers (acf, max and hps) and report the results with two values of threshold (threshold = -40, -20)
 '''
+def run_evaluation_fftmax(complete_path_to_data_folder):
+    # init
+    rmsAvg = 0
+    pfp=0
+    pfn=0
+    pfp_sum = 0
+    pfn_sum = 0
+    rmsAvg_sum = 0
+
+    iNumOfFiles = 0
+    # for loop over files
+    for file in os.listdir(complete_path_to_data_folder):
+        if file.endswith(".wav"):
+            iNumOfFiles += 1
+            # read audio
+            [fs, afAudioData] = ToolReadAudio(complete_path_to_data_folder + file)
+            # read ground truth (assume the file is there!)
+            refdata = np.loadtxt(complete_path_to_data_folder + os.path.splitext(file)[0]+'.f0.Corrected.txt')
+        else:
+            continue
+        # extract pitch
+        [f0,t] = track_pitch_fftmax(afAudioData,1024,512,fs)
+        # compute rms and accumulate
+        rmsAvg,pfp,pfn = eval_pitchtrack_v2(f0, refdata[:,2])
+        rmsAvg_sum +=rmsAvg
+        pfp_sum += pfp
+        pfn_sum += pfn
+
+
+        
+    if iNumOfFiles == 0:
+        return -1
+    return rmsAvg_sum/iNumOfFiles , pfp_sum/iNumOfFiles , pfn_sum/iNumOfFiles
+
+def run_evaluation_hps(complete_path_to_data_folder):
+    # init
+    rmsAvg = 0
+    pfp=0
+    pfn=0
+    pfp_sum = 0
+    pfn_sum = 0
+    rmsAvg_sum = 0
+
+    iNumOfFiles = 0
+    # for loop over files
+    for file in os.listdir(complete_path_to_data_folder):
+        if file.endswith(".wav"):
+            iNumOfFiles += 1
+            # read audio
+            [fs, afAudioData] = ToolReadAudio(complete_path_to_data_folder + file)
+            # read ground truth (assume the file is there!)
+            refdata = np.loadtxt(complete_path_to_data_folder + os.path.splitext(file)[0]+'.f0.Corrected.txt')
+        else:
+            continue
+        # extract pitch
+        [f0,t] = track_pitch_hps(afAudioData,1024,512,fs)
+        # compute rms and accumulate
+        rmsAvg,pfp,pfn = eval_pitchtrack_v2(f0, refdata[:,2])
+        rmsAvg_sum +=rmsAvg
+        pfp_sum += pfp
+        pfn_sum += pfn
+
+
+        
+    if iNumOfFiles == 0:
+        return -1
+    return rmsAvg_sum/iNumOfFiles , pfp_sum/iNumOfFiles , pfn_sum/iNumOfFiles
+
 def track_pitch(x,blockSize,hopSize,fs,method,voicingThres):
     '''
     that takes audio signal ‘x’ and related paramters (fs, blockSize, hopSize), 
@@ -418,6 +486,48 @@ def track_pitch(x,blockSize,hopSize,fs,method,voicingThres):
 
     return f0Adj, timeInSec
 
+def evaluate_trackpitch_noel(complete_path_to_data_folder):
+    methods = ['acf','hps','max']
+    thresholds = [1024,512]
+    iNumOfFiles = 0
+    rms_avg = np.zeros((3,2))
+    pfp_avg = np.zeros((3,2))
+    pfn_avg = np.zeros((3,2))
+    # for loop over files
+    for tr in range (len(thresholds)):
+        for met in range(len(methods)):
+            rmsAvg = 0
+            pfp=0
+            pfn=0
+            pfp_sum = 0
+            pfn_sum = 0
+            rmsAvg_sum = 0
+
+            iNumOfFiles = 0
+            for file in os.listdir(complete_path_to_data_folder):
+                if file.endswith(".wav"):
+                    iNumOfFiles += 1
+                    # read audio
+                    [fs, afAudioData] = ToolReadAudio(complete_path_to_data_folder + file)
+                    # read ground truth (assume the file is there!)
+                    refdata = np.loadtxt(complete_path_to_data_folder + os.path.splitext(file)[0]+'.f0.Corrected.txt')
+                else:
+                    continue
+
+                # extract pitch
+                f0Adj, timeInSec = track_pitch(afAudioData,1024,512,fs,methods[met],thresholds[tr])
+                # compute rms and accumulate
+                rmsAvg,pfp,pfn = eval_pitchtrack_v2(f0Adj, refdata[:,2])
+                rmsAvg_sum +=rmsAvg
+                pfp_sum += pfp
+                pfn_sum += pfn
+                rmsAvg_sum/iNumOfFiles=rms_avg[met,tr]
+                pfp_sum/iNumOfFiles=pfp_avg[met,tr]
+                pfn_sum/iNumOfFiles=pfn_avg[met,tr]
+
+
+    return rms_avg,pfp_avg,pfn_avg
+
 
 #************************------------------------------************************---------------------------******#
 #BONUS
@@ -437,3 +547,5 @@ def track_pitch_mod(x,blockSize,hopSize,fs):
 
 
 executeassign3()
+
+

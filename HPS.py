@@ -39,13 +39,15 @@ def get_f0_from_Hps(X,fs,order):
     f = np.zeros(X.shape[0])
     Length =  int((X.shape[1]-1)/order)
     afHps = X[::,np.arange(0,Length)]
+    #Convert Frequency to bins
+    min_bin = int(round(f_min / fs * 2 * (X.shape[1] - 1)))
 
 
     for i in range(1,order):
              X_d = X[::,::i+1]
              afHps *= X_d[::,np.arange(0,Length)]
-    f = np.argmax(afHps[::,np.arange(afHps.shape[0])], axis=1)
-    f0 = f
+    f = np.argmax(afHps[::,np.arange(min_bin,afHps.shape[1])], axis=1)
+    f0 = (f + min_bin) / (X.shape[1] - 1) * fs / 2
     
     return f0
 
