@@ -521,9 +521,9 @@ def evaluate_trackpitch_noel(complete_path_to_data_folder):
                 rmsAvg_sum +=rmsAvg
                 pfp_sum += pfp
                 pfn_sum += pfn
-                rmsAvg_sum/iNumOfFiles=rms_avg[met,tr]
-                pfp_sum/iNumOfFiles=pfp_avg[met,tr]
-                pfn_sum/iNumOfFiles=pfn_avg[met,tr]
+                rms_avg[met,tr] = rmsAvg_sum/iNumOfFiles
+                pfp_avg[met,tr] = pfp_sum/iNumOfFiles
+                pfn_avg[met,tr] = pfp_sum/iNumOfFiles
 
 
     return rms_avg,pfp_avg,pfn_avg
@@ -531,6 +531,11 @@ def evaluate_trackpitch_noel(complete_path_to_data_folder):
 
 #************************------------------------------************************---------------------------******#
 #BONUS
+
+# def zero_padding(xb):
+#     xz_b = np.zeros(xb.shape[0],xb.shape[1]+int(xb.shape[1]//2))
+#     for i in xb:
+#     return xz_b
 def track_pitch_mod(x,blockSize,hopSize,fs):
     '''
     [10 points, capped at max] 
@@ -541,11 +546,14 @@ def track_pitch_mod(x,blockSize,hopSize,fs):
     '''
     f0=0
     timeInSec = 0
+    xb,timeInSec = block_audio(x,blockSize,hopSize,fs)
+
+
 
     return f0,timeInSec
 
 
 
-executeassign3()
+#executeassign3()
 
 
