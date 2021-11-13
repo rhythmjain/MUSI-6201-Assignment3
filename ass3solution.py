@@ -425,8 +425,6 @@ def run_evaluation_fftmax(complete_path_to_data_folder):
         rmsAvg_sum +=rmsAvg
         pfp_sum += pfp
         pfn_sum += pfn
-
-
         
     if iNumOfFiles == 0:
         return -1
@@ -488,7 +486,7 @@ def track_pitch(x,blockSize,hopSize,fs,method,voicingThres):
 
 def evaluate_trackpitch_noel(complete_path_to_data_folder):
     methods = ['acf','hps','max']
-    thresholds = [1024,512]
+    thresholds = [-40,-20]
     iNumOfFiles = 0
     rms_avg = np.zeros((3,2))
     pfp_avg = np.zeros((3,2))
@@ -511,7 +509,7 @@ def evaluate_trackpitch_noel(complete_path_to_data_folder):
                     [fs, afAudioData] = ToolReadAudio(complete_path_to_data_folder + file)
                     # read ground truth (assume the file is there!)
                     refdata = np.loadtxt(complete_path_to_data_folder + os.path.splitext(file)[0]+'.f0.Corrected.txt')
-                else:
+                else: #this is redundant
                     continue
 
                 # extract pitch
@@ -554,6 +552,11 @@ def track_pitch_mod(x,blockSize,hopSize,fs):
 
 
 
+
+
+
+complete_path_to_data_folder = "/Users/rhythmjain/Desktop/GTStuff/1-2/AudioContent/A03/MUSI-6201-Assignment3/trainData/"
 #executeassign3()
-
-
+#print(run_evaluation_fftmax(complete_path_to_data_folder)) 
+#print(run_evaluation_hps(complete_path_to_data_folder)) 
+#print(evaluate_trackpitch_noel(complete_path_to_data_folder))
