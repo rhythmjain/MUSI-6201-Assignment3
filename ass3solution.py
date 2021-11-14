@@ -213,7 +213,7 @@ def eval_voiced_fp(estimation,annotation):
     The numerator would be how many of these blocks were classified as voiced (with a fundamental frequency not equal to 0) is your estimation. 
     '''
     
-    numerator = np.count_nonzero([estimation[annotation==0]!=0])
+    numerator = np.count_nonzero(estimation[annotation==0])
     denominator = np.count_nonzero([annotation==0])
     false_positives_percentage = -1 #Need to check for these in the calling functions
     try:
