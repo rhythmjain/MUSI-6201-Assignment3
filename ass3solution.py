@@ -144,11 +144,12 @@ def track_pitch_hps(x,blockSize,hopSize,fs):
 def comp_acf(inputVector, bIsNormalized = True):
     if bIsNormalized:
         norm = np.dot(inputVector, inputVector)
+
     else:
         norm = 1
     afCorr = np.correlate(inputVector, inputVector, "full") / norm
     afCorr = afCorr[np.arange(inputVector.size-1, afCorr.size)]
-    return (afCorr)
+    return afCorr,norm
 
 def get_f0_from_acf (r, fs):
     eta_min = 1
@@ -532,10 +533,21 @@ def evaluate_trackpitch_noel(complete_path_to_data_folder):
 #************************------------------------------************************---------------------------******#
 #BONUS
 
-# def zero_padding(xb):
-#     xz_b = np.zeros(xb.shape[0],xb.shape[1]+int(xb.shape[1]//2))
-#     for i in xb:
-#     return xz_b
+def zero_padding(xb):
+     xz_b = np.zeros((xb.shape[0],xb.shape[1]+int(xb.shape[1])))
+     for i in range(xb.shape[1]):
+        xz_b[i,:][0:xb.shape[1]] = xb[i,:]
+     return xz_b
+def rectification(x):
+    for i in range(x.shape[0]):
+        if (x[i]<0):
+            x[i] = -1
+        elif (x[i]>0):
+            x[i] = 1
+        else:
+            x[i]=0
+    return x
+        
 def track_pitch_mod(x,blockSize,hopSize,fs):
     '''
     [10 points, capped at max] 
@@ -544,9 +556,26 @@ def track_pitch_mod(x,blockSize,hopSize,fs):
     (not provided) with a block size of 1024 and a hopsize of 512, and points will be given based on its performance compared to the other groups. Best performing
     group gets 10 points and worst performing group gets 1 point. 
     '''
+    def zero_padding(xb):
+     xz_b = np.zeros((xb.shape[0],xb.shape[1]+int(xb.shape[1])))
+     for i in range(xb.shape[1]):
+        xz_b[i,:][0:xb.shape[1]] = xb[i,:]
+     return xz_b
+    def rectification(x):   
+        for i in range(x.shape[0]):
+            if (x[i]<0):
+                x[i] = -1
+            elif (x[i]>0):
+                x[i] = 1
+            else:
+                x[i]=0
+        return x
     f0=0
     timeInSec = 0
+    x = rectification(x)
     xb,timeInSec = block_audio(x,blockSize,hopSize,fs)
+    xz_b = zero_padding(xb)
+
 
 
 
