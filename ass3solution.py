@@ -519,9 +519,9 @@ def evaluate_trackpitch_noel(complete_path_to_data_folder):
                 rmsAvg_sum +=rmsAvg
                 pfp_sum += pfp
                 pfn_sum += pfn
-                rms_avg[met,tr] = rmsAvg_sum/iNumOfFiles
-                pfp_avg[met,tr] = pfp_sum/iNumOfFiles
-                pfn_avg[met,tr] = pfp_sum/iNumOfFiles
+            rms_avg[met,tr] = rmsAvg_sum/iNumOfFiles
+            pfp_avg[met,tr] = pfp_sum/iNumOfFiles
+            pfn_avg[met,tr] = pfp_sum/iNumOfFiles
 
 
     return rms_avg,pfp_avg,pfn_avg
