@@ -524,7 +524,7 @@ def evaluate_trackpitch_noel(complete_path_to_data_folder):
             pfn_avg[met,tr] = pfn_sum#iNumOfFiles
 
 
-    return rms_avg,pfp_avg,pfn_avg,iNumOfFiles
+    return rms_avg,pfp_avg,pfn_avg
 
 
 #************************------------------------------************************---------------------------******#
@@ -542,13 +542,25 @@ def track_pitch_mod(x,blockSize,hopSize,fs):
     (not provided) with a block size of 1024 and a hopsize of 512, and points will be given based on its performance compared to the other groups. Best performing
     group gets 10 points and worst performing group gets 1 point. 
     '''
+    def zero_padding(xb):
+     xz_b = np.zeros((xb.shape[0],xb.shape[1]+int(xb.shape[1])))
+     for i in range(xb.shape[1]):
+        xz_b[i,:][0:xb.shape[1]] = xb[i,:]
+     return xz_b
+    def rectification(x):   
+        for i in range(x.shape[0]):
+            if (x[i]<0):
+                x[i] = -1
+            elif (x[i]>0):
+                x[i] = 1
+            else:
+                x[i]=0
+        return x
     f0=0
     timeInSec = 0
+    x = rectification(x)
     xb,timeInSec = block_audio(x,blockSize,hopSize,fs)
-
-
-
-    return f0,timeInSec
+    xz_b = zero_padding(xb)
 
 
 
