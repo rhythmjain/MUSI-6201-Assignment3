@@ -546,18 +546,31 @@ def track_pitch_mod(x,blockSize,hopSize,fs):
      for i in range(xb.shape[1]):
         xz_b[i,:][0:xb.shape[1]] = xb[i,:]
      return xz_b
-       
-    x = np.sign(x)
+    def extract_zerocrossingrate(xb):
+        zcr = np.zeros(xb.shape[0])
+        for block in range(xb.shape[0]):
+            zcr[block] = 0.5 * np.mean(np.abs(np.diff(np.sign(xb[block]))))
+        return zcr
     xb,timeInSec = block_audio(x,blockSize,hopSize,fs)
-    xz_b = zero_padding(xb)
-    XZ, fInHz = compute_spectrogram(xz_b,fs)
-    f0 = np.zeros((timeInSec.shape[0]))
-    r_arr = np.zeros(xb.shape)
-    for i in range(XZ.shape[1]):
-        r_arr[i] = comp_acf(XZ[:,i])
-        f0[i] = get_f0_from_acf(r,fs)
-    return (f0,r_arr,timeInSec)
+    rmsDb = extract_rms(xb)  
+    x = np.sign(x)
+    f01 = track_pitch_acf(x,blockSize,hopSize,fs)
+
+    voicing_mask = create_voicing_mask(rmsDb, voicingThres=-30)
+    f0Adj = apply_voicing_mask(f01, voicing_mask)
 
 
-complete_path_to_data_folder = "/Users/rhythmjain/Desktop/GTStuff/1-2/AudioContent/A03/MUSI-6201-Assignment3/trainData/"
-evaluate_trackpitch(complete_path_to_data_folder)
+    # xz_b = zero_padding(xb)
+    # XZ, fInHz = compute_spectrogram(xz_b,fs)
+    # f0 = np.zeros((timeInSec.shape[0]))
+    # r = np.zeros(xb.shape)
+    # for i in range(XZ.shape[1]):
+    #     r = comp_acf(XZ[:,i])
+    #     f0[i] = get_f0_from_acf(r,fs)
+    #return (f0,timeInSec)
+    # freqs = fInHz[f0[i]]
+    return f0Adj
+
+
+#complete_path_to_data_folder = "/Users/rhythmjain/Desktop/GTStuff/1-2/AudioContent/A03/MUSI-6201-Assignment3/trainData/"
+#evaluate_trackpitch(complete_path_to_data_folder)
