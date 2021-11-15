@@ -1,7 +1,7 @@
 from __future__ import print_function
 import numpy as np
 import math
-import scipy 
+import scipy as sc 
 import os, glob
 from scipy.fftpack import fft
 import matplotlib.pyplot as plt
@@ -47,7 +47,7 @@ def block_audio(x, blockSize, hopSize, fs):
 
 def compute_hann_window(window_size):
     return 0.5*(1-(np.cos(2*np.pi*(np.arange(window_size)/window_size))))
-
+"""
 def compute_spectrogram2(xb,fs):
     [NumBlocks, blockSize] = xb.shape
     X_spec= np.zeros((blockSize//2 + 1,NumBlocks))
@@ -70,6 +70,7 @@ def compute_spectrogram2(xb,fs):
         X_spec[::,block] = fourier(xb[block])
     fInHz = np.arange(0, blockSize, dtype=int)*fs/blockSize
     return X_spec,fInHz
+"""
 
 def compute_spectrogram(xb,fs):
     '''
@@ -97,11 +98,11 @@ def track_pitch_fftmax(x, blockSize,hopSize,fs):
     '''
     xb, t = block_audio(x, blockSize, hopSize, fs)
     X, freq= compute_spectrogram(xb, fs)
-    print(t.size, freq.size, X.shape)
+    #print(t.size, freq.size, X.shape)
     f0 = np.zeros(xb.shape[0])
     for i in range(X.shape[1]):
         f0[i] = freq[np.argmax(X[:,i])]
-    print(f0.size)
+    #print(f0.size)
     return f0, t
 
 def get_f0_from_Hps(X,fs,order):
@@ -111,7 +112,7 @@ def get_f0_from_Hps(X,fs,order):
 
     THIS COMPUTES HPS FOR EACH BLOCK
     '''
-    f_min = 300
+    f_min = 200
     f0 = np.zeros(X.shape[1])
     max_length = int((X.shape[0]-1)/order)
     dwnpro = X[np.arange(0,max_length),:]
@@ -126,6 +127,7 @@ def get_f0_from_Hps(X,fs,order):
         #plt.figure()
         #plt.plot(dwnpro)
         #plt.show()
+    #plt.show()
     f = np.argmax(dwnpro[np.arange(min_bin,dwnpro.shape[0])],axis=0)
     f0 = fInHz[f]
     
@@ -458,8 +460,6 @@ def run_evaluation_hps(complete_path_to_data_folder):
         pfp_sum += pfp
         pfn_sum += pfn
 
-
-        
     if iNumOfFiles == 0:
         return -1
     return rmsAvg_sum/iNumOfFiles , pfp_sum/iNumOfFiles , pfn_sum/iNumOfFiles
@@ -481,10 +481,10 @@ def track_pitch(x,blockSize,hopSize,fs,method,voicingThres):
     rmsDb = extract_rms(xb)
     voicing_mask = create_voicing_mask(rmsDb, voicingThres)
     f0Adj = apply_voicing_mask(f0, voicing_mask)
-
+    
     return f0Adj, timeInSec
 
-def evaluate_trackpitch_noel(complete_path_to_data_folder):
+def evaluate_trackpitch(complete_path_to_data_folder):
     methods = ['acf','hps','max']
     thresholds = [-40,-20]
     iNumOfFiles = 0
@@ -523,7 +523,6 @@ def evaluate_trackpitch_noel(complete_path_to_data_folder):
             pfp_avg[met,tr] = pfp_sum/iNumOfFiles
             pfn_avg[met,tr] = pfn_sum/iNumOfFiles
 
-
     return rms_avg,pfp_avg,pfn_avg
 
 
@@ -547,28 +546,18 @@ def track_pitch_mod(x,blockSize,hopSize,fs):
      for i in range(xb.shape[1]):
         xz_b[i,:][0:xb.shape[1]] = xb[i,:]
      return xz_b
-    def rectification(x):   
-        for i in range(x.shape[0]):
-            if (x[i]<0):
-                x[i] = -1
-            elif (x[i]>0):
-                x[i] = 1
-            else:
-                x[i]=0
-        return x
-    f0=0
-    timeInSec = 0
-    x = rectification(x)
+       
+    x = np.sign(x)
     xb,timeInSec = block_audio(x,blockSize,hopSize,fs)
     xz_b = zero_padding(xb)
-
-
-
-
+    XZ, fInHz = compute_spectrogram(xz_b,fs)
+    f0 = np.zeros((timeInSec.shape[0]))
+    r_arr = np.zeros(xb.shape)
+    for i in range(XZ.shape[1]):
+        r_arr[i] = comp_acf(XZ[:,i])
+        f0[i] = get_f0_from_acf(r,fs)
+    return (f0,r_arr,timeInSec)
 
 
 complete_path_to_data_folder = "/Users/rhythmjain/Desktop/GTStuff/1-2/AudioContent/A03/MUSI-6201-Assignment3/trainData/"
-#executeassign3()
-#print(run_evaluation_fftmax(complete_path_to_data_folder)) 
-#print(run_evaluation_hps(complete_path_to_data_folder)) 
-#print(evaluate_trackpitch_noel(complete_path_to_data_folder))
+evaluate_trackpitch(complete_path_to_data_folder)
